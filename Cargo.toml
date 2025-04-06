@@ -29,3 +29,14 @@ aes = "0.8"
 block-modes = "0.9"
 hex = "0.4"
 chrono = "0.4"
+
+# Web UI dependencies
+actix-web = "4.4"
+actix-files = "0.6"
+handlebars = { version = "4.5", features = ["dir_source"] }
+actix-rt = "2.9"
+env_logger = "0.10"
+log = "0.4"
+futures = "0.3"
+actix-ws = "0.2"
+tokio = { version = "1.35", features = ["full"] }

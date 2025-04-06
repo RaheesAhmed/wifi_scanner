@@ -1,0 +1,83 @@
+{{#> layout}}
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <div class="interface-info">
+            <h3>Interface: <span id="interface-name">{{interface}}</span></h3>
+        </div>
+        <div class="scan-controls">
+            <button id="scan-btn" class="btn primary-btn">
+                <i class="fas fa-search"></i> Scan Networks
+            </button>
+        </div>
+    </div>
+    
+    <div class="scan-status" id="scan-status">
+        <div class="spinner hidden" id="scan-spinner"></div>
+        <p id="status-message">Ready to scan</p>
+    </div>
+    
+    <div class="networks-container">
+        <h3>Networks Found: <span id="networks-count">{{networks_count}}</span></h3>
+        
+        <div class="networks-table-container">
+            <table class="networks-table" id="networks-table">
+                <thead>
+                    <tr>
+                        <th>SSID</th>
+                        <th>BSSID</th>
+                        <th>Channel</th>
+                        <th>Signal</th>
+                        <th>Security</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="networks-tbody">
+                    {{#each networks}}
+                    <tr>
+                        <td>{{this.ssid}}</td>
+                        <td>{{this.bssid}}</td>
+                        <td>{{this.channel}}</td>
+                        <td>{{this.signal_strength}}</td>
+                        <td class="security-cell {{#if (eq this.security "None")}}insecure{{/if}}">
+                            {{this.security}}
+                        </td>
+                        <td>
+                            <button class="btn small-btn security-btn" data-ssid="{{this.ssid}}" data-bssid="{{this.bssid}}">
+                                <i class="fas fa-shield-alt"></i> Check
+                            </button>
+                        </td>
+                    </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="network-details-modal" id="network-details-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Network Details</h3>
+                <button class="close-btn" id="close-modal-btn">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <div class="network-info">
+                    <p><strong>SSID:</strong> <span id="modal-ssid"></span></p>
+                    <p><strong>BSSID:</strong> <span id="modal-bssid"></span></p>
+                    <p><strong>Security:</strong> <span id="modal-security"></span></p>
+                </div>
+                <div class="vulnerabilities-section">
+                    <h4>Security Analysis</h4>
+                    <div id="vulnerabilities-list">
+                        <p>Click "Check Security" to analyze this network</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn primary-btn" id="check-security-btn">
+                    <i class="fas fa-shield-alt"></i> Check Security
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{{/layout}}

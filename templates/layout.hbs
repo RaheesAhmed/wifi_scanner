@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}}</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/handshake.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <nav class="sidebar">
+            <div class="logo">
+                <i class="fas fa-wifi"></i>
+                <h1>WiFi Scanner</h1>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/"><i class="fas fa-home"></i> Home</a></li>
+                <li><a href="/dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li><a href="/security"><i class="fas fa-shield-alt"></i> Security</a></li>
+                <li><a href="/handshakes"><i class="fas fa-key"></i> Handshakes</a></li>
+                <li><a href="/testing"><i class="fas fa-flask"></i> Testing</a></li>
+                <li><a href="/about"><i class="fas fa-info-circle"></i> About</a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <p>Educational Purposes Only</p>
+            </div>
+        </nav>
+
+        <main class="content">
+            <header>
+                <div class="header-title">
+                    <h2>{{title}}</h2>
+                </div>
+                <div class="user-info">
+                    <span class="version">v{{version}}</span>
+                </div>
+            </header>
+
+            <div class="main-content">
+                {{> @partial-block}}
+            </div>
+
+            <footer>
+                <p>&copy; 2025 WiFi Scanner - For Educational Purposes Only</p>
+            </footer>
+        </main>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

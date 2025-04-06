@@ -5,11 +5,12 @@ use regex::Regex;
 use std::process::Command;
 use std::str;
 use std::path::Path;
-
+use serde::{Serialize, Deserialize};
 
 mod security;
 mod wpa_cracker;
 mod packet_capture;
+mod web_ui;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -119,9 +120,49 @@ enum Commands {
         #[arg(short, long)]
         disable: bool,
     },
+
+    /// Start the web UI
+    WebUI {
+        /// Port to run the web server on
+        #[arg(short, long, default_value = "8080")]
+        port: u16,
+    },
+
+    /// List all captured handshakes
+    ListHandshakes,
+
+    /// Perform real-world testing on a network (EDUCATIONAL PURPOSES ONLY)
+    RealWorldTest {
+        /// SSID of the network to test
+        #[arg(short, long)]
+        ssid: String,
+
+        /// BSSID (MAC address) of the network to test
+        #[arg(short, long)]
+        bssid: String,
+
+        /// Channel of the target network
+        #[arg(short, long)]
+        channel: u8,
+
+        /// Specify the wireless interface (default: auto-detect)
+        #[arg(short, long)]
+        interface: Option<String>,
+    },
+
+    /// Verify a captured handshake
+    VerifyHandshake {
+        /// Path to the handshake capture file
+        #[arg(short, long)]
+        capture_file: String,
+
+        /// SSID of the network (optional)
+        #[arg(short, long)]
+        ssid: Option<String>,
+    },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct WifiNetwork {
     ssid: String,
     bssid: String,
@@ -178,6 +219,20 @@ fn main() -> Result<()> {
             println!("   SSID: {}", handshake.ssid);
             println!("   BSSID: {}", handshake.bssid);
             println!("   Client MAC: {}", handshake.client_mac);
+            println!("   Capture file: {}", handshake.capture_file);
+            println!("   Timestamp: {}", handshake.timestamp);
+            println!("   Verified: {}", if handshake.verified { "Yes".green() } else { "No".red() });
+
+            if handshake.verified {
+                println!("{} Handshake was successfully captured and verified", "[+]".green());
+                println!("{} You can now attempt to crack it using:", "[*]".blue());
+                println!("   wifi_scanner crack-wpa --wordlist <path_to_wordlist> --ssid \"{}\" --bssid {}",
+                         handshake.ssid, handshake.bssid);
+            } else {
+                println!("{} Handshake may not be complete. Try again or deauthenticate clients first", "[!]".yellow());
+                println!("{} You can deauthenticate clients using:", "[*]".blue());
+                println!("   wifi_scanner deauth --bssid {} --count 5", handshake.bssid);
+            }
         },
         Some(Commands::CrackWPA { wordlist, ssid, bssid }) => {
             println!("{} EDUCATIONAL PURPOSES ONLY - DO NOT USE WITHOUT PERMISSION", "[!]".red());
@@ -287,6 +342,64 @@ fn main() -> Result<()> {
                 println!("{} Monitor mode enabled on interface: {}", "[+]".green(), monitor_interface);
                 println!("{} Don't forget to disable monitor mode when finished", "[*]".blue());
                 println!("{} Use: wifi_scanner monitor-mode --interface {} --disable", "[*]".blue(), interface);
+            }
+        },
+        Some(Commands::WebUI { port }) => {
+            println!("{} Starting web UI on http://localhost:{}", "[*]".blue(), port);
+            println!("{} Press Ctrl+C to stop the server", "[*]".blue());
+
+            // Use tokio runtime to run the web server
+            actix_rt::System::new().block_on(async {
+                web_ui::start_server(*port).await
+            })?;
+        },
+        Some(Commands::ListHandshakes) => {
+            println!("{} Listing all captured handshakes", "[*]".blue());
+
+            let handshakes = packet_capture::list_handshakes()?;
+
+            if handshakes.is_empty() {
+                println!("{} No handshakes found", "[!]".yellow());
+            } else {
+                println!("{} Found {} handshakes:", "[+]".green(), handshakes.len());
+
+                for (i, handshake) in handshakes.iter().enumerate() {
+                    println!("{} Handshake #{}", "[+]".green(), i + 1);
+                    println!("   SSID: {}", handshake.ssid);
+                    println!("   BSSID: {}", handshake.bssid);
+                    println!("   Captured: {}", handshake.timestamp);
+                    println!("   File: {}", handshake.capture_file);
+                    println!("   Verified: {}", if handshake.verified { "Yes".green() } else { "No".red() });
+                }
+            }
+        },
+        Some(Commands::RealWorldTest { ssid, bssid, channel, interface }) => {
+            let interface = interface.clone().unwrap_or_else(|| detect_wifi_interface());
+            println!("{} EDUCATIONAL PURPOSES ONLY - DO NOT USE WITHOUT PERMISSION", "[!]".red());
+            println!("{} Starting real-world testing on network: {}", "[*]".blue(), ssid);
+
+            let findings = packet_capture::real_world_test(&interface, bssid, ssid, *channel)?;
+
+            println!("{} Testing completed. Results:", "[+]".green());
+            if findings.is_empty() {
+                println!("{} No vulnerabilities found", "[+]".green());
+            } else {
+                println!("{} Found {} potential issues:", "[!]".red(), findings.len());
+                for (i, finding) in findings.iter().enumerate() {
+                    println!("{} {}", format!("[{}]", i+1).red(), finding);
+                }
+            }
+        },
+        Some(Commands::VerifyHandshake { capture_file, ssid }) => {
+            println!("{} Verifying handshake capture: {}", "[*]".blue(), capture_file);
+
+            let ssid_str = ssid.clone().unwrap_or_else(|| "unknown".to_string());
+            let verified = packet_capture::verify_handshake_capture(capture_file, &ssid_str)?;
+
+            if verified {
+                println!("{} Handshake is valid", "[+]".green());
+            } else {
+                println!("{} Handshake is invalid or incomplete", "[!]".red());
             }
         },
         None => {

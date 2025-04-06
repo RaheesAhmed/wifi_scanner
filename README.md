@@ -24,6 +24,9 @@ This tool is designed for security professionals and network administrators to t
 - Capture WPA handshakes for security analysis
 - Crack WPA passwords using dictionary attacks (with built-in cracker and aircrack-ng integration)
 - Analyze WPA handshakes and derive encryption keys using PBKDF2 and HMAC-SHA1
+- Perform real-world testing to identify common network vulnerabilities
+- Test for WPS vulnerabilities, weak cipher suites, and PMKID attacks
+- Verify captured handshakes for completeness and validity
 
 ## Requirements
 
@@ -91,11 +94,23 @@ wifi_scanner deauth --bssid "00:11:22:33:44:55" --count 10
 # Capture a WPA handshake
 wifi_scanner capture-handshake --bssid "00:11:22:33:44:55" --channel 6
 
+# List all captured handshakes
+wifi_scanner list-handshakes
+
+# Verify a captured handshake
+wifi_scanner verify-handshake --capture-file "captures/handshake_001122334455.cap" --ssid "NetworkName"
+
+# Perform real-world testing on a network
+wifi_scanner real-world-test --ssid "NetworkName" --bssid "00:11:22:33:44:55" --channel 6
+
 # Crack a WPA password using a dictionary attack
 wifi_scanner crack-wpa --ssid "NetworkName" --bssid "00:11:22:33:44:55" --wordlist wordlist.txt
 
 # Run a demonstration of WPA cracking with a known password
 wifi_scanner demo-wpa-crack --password "mypassword"
+
+# Start the web UI on port 8080
+wifi_scanner web-ui --port 8080
 ```
 
 ## Legal and Ethical Considerations

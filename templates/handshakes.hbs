@@ -1,0 +1,309 @@
+{{#> layout}}
+<div class="handshakes-container">
+    <div class="handshakes-header">
+        <div class="interface-info">
+            <h3>Interface: <span id="interface-name">{{interface}}</span></h3>
+        </div>
+        <div class="capture-controls">
+            <button id="refresh-btn" class="btn primary-btn">
+                <i class="fas fa-sync"></i> Refresh Handshakes
+            </button>
+        </div>
+    </div>
+    
+    <div class="capture-form">
+        <h3>Capture New Handshake</h3>
+        <div class="form-group">
+            <label for="bssid-input">BSSID (MAC Address):</label>
+            <input type="text" id="bssid-input" placeholder="00:11:22:33:44:55" />
+        </div>
+        <div class="form-group">
+            <label for="channel-input">Channel:</label>
+            <input type="number" id="channel-input" min="1" max="14" value="1" />
+        </div>
+        <button id="capture-btn" class="btn primary-btn">
+            <i class="fas fa-wifi"></i> Capture Handshake
+        </button>
+        <div class="disclaimer">
+            <p><strong>Note:</strong> For educational purposes only. Only use on networks you own or have permission to test.</p>
+        </div>
+    </div>
+    
+    <div class="capture-status hidden" id="capture-status">
+        <div class="spinner"></div>
+        <p id="capture-message">Capturing handshake...</p>
+    </div>
+    
+    <div class="handshakes-list">
+        <h3>Captured Handshakes: <span id="handshakes-count">{{handshakes_count}}</span></h3>
+        
+        {{#if handshakes}}
+        <div class="table-container">
+            <table id="handshakes-table" class="data-table">
+                <thead>
+                    <tr>
+                        <th>SSID</th>
+                        <th>BSSID</th>
+                        <th>Captured</th>
+                        <th>Verified</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="handshakes-tbody">
+                    {{#each handshakes}}
+                    <tr>
+                        <td>{{this.ssid}}</td>
+                        <td>{{this.bssid}}</td>
+                        <td>{{this.timestamp}}</td>
+                        <td>{{#if this.verified}}<span class="verified">Yes</span>{{else}}<span class="not-verified">No</span>{{/if}}</td>
+                        <td>
+                            <button class="btn small-btn crack-btn" data-ssid="{{this.ssid}}" data-bssid="{{this.bssid}}">
+                                <i class="fas fa-key"></i> Crack
+                            </button>
+                        </td>
+                    </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+        </div>
+        {{else}}
+        <div class="no-data">
+            <p>No handshakes captured yet. Use the form above to capture a handshake.</p>
+        </div>
+        {{/if}}
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handshake functionality
+        const refreshBtn = document.getElementById('refresh-btn');
+        const captureBtn = document.getElementById('capture-btn');
+        const bssidInput = document.getElementById('bssid-input');
+        const channelInput = document.getElementById('channel-input');
+        const captureStatus = document.getElementById('capture-status');
+        const captureMessage = document.getElementById('capture-message');
+        const handshakesCount = document.getElementById('handshakes-count');
+        const handshakesTable = document.getElementById('handshakes-table');
+        const handshakesTbody = document.getElementById('handshakes-tbody');
+        
+        // Refresh handshakes list
+        refreshBtn.addEventListener('click', function() {
+            refreshHandshakes();
+        });
+        
+        // Capture handshake
+        captureBtn.addEventListener('click', function() {
+            const bssid = bssidInput.value.trim();
+            const channel = parseInt(channelInput.value);
+            
+            if (!bssid) {
+                alert('Please enter a BSSID (MAC address)');
+                return;
+            }
+            
+            if (isNaN(channel) || channel < 1 || channel > 14) {
+                alert('Please enter a valid channel (1-14)');
+                return;
+            }
+            
+            captureStatus.classList.remove('hidden');
+            captureMessage.textContent = 'Capturing handshake...';
+            
+            fetch('/api/capture-handshake', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    bssid: bssid,
+                    channel: channel
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    captureMessage.textContent = data.message;
+                    setTimeout(() => {
+                        refreshHandshakes();
+                        captureStatus.classList.add('hidden');
+                    }, 30000); // Wait 30 seconds before refreshing
+                } else {
+                    captureMessage.textContent = 'Error: ' + data.message;
+                    setTimeout(() => {
+                        captureStatus.classList.add('hidden');
+                    }, 3000);
+                }
+            })
+            .catch(error => {
+                captureMessage.textContent = 'Error: ' + error.message;
+                setTimeout(() => {
+                    captureStatus.classList.add('hidden');
+                }, 3000);
+            });
+        });
+        
+        // Refresh handshakes list
+        function refreshHandshakes() {
+            fetch('/api/handshakes')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    handshakesCount.textContent = data.handshakes_count;
+                    
+                    // Clear table
+                    handshakesTbody.innerHTML = '';
+                    
+                    // Add handshakes to table
+                    data.handshakes.forEach(handshake => {
+                        const row = document.createElement('tr');
+                        
+                        const ssidCell = document.createElement('td');
+                        ssidCell.textContent = handshake.ssid;
+                        
+                        const bssidCell = document.createElement('td');
+                        bssidCell.textContent = handshake.bssid;
+                        
+                        const timestampCell = document.createElement('td');
+                        timestampCell.textContent = handshake.timestamp;
+                        
+                        const verifiedCell = document.createElement('td');
+                        if (handshake.verified) {
+                            const verifiedSpan = document.createElement('span');
+                            verifiedSpan.className = 'verified';
+                            verifiedSpan.textContent = 'Yes';
+                            verifiedCell.appendChild(verifiedSpan);
+                        } else {
+                            const notVerifiedSpan = document.createElement('span');
+                            notVerifiedSpan.className = 'not-verified';
+                            notVerifiedSpan.textContent = 'No';
+                            verifiedCell.appendChild(notVerifiedSpan);
+                        }
+                        
+                        const actionsCell = document.createElement('td');
+                        const crackBtn = document.createElement('button');
+                        crackBtn.className = 'btn small-btn crack-btn';
+                        crackBtn.dataset.ssid = handshake.ssid;
+                        crackBtn.dataset.bssid = handshake.bssid;
+                        crackBtn.innerHTML = '<i class="fas fa-key"></i> Crack';
+                        actionsCell.appendChild(crackBtn);
+                        
+                        row.appendChild(ssidCell);
+                        row.appendChild(bssidCell);
+                        row.appendChild(timestampCell);
+                        row.appendChild(verifiedCell);
+                        row.appendChild(actionsCell);
+                        
+                        handshakesTbody.appendChild(row);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error refreshing handshakes:', error);
+            });
+        }
+        
+        // Handle crack button clicks
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('crack-btn') || e.target.parentElement.classList.contains('crack-btn')) {
+                const btn = e.target.classList.contains('crack-btn') ? e.target : e.target.parentElement;
+                const ssid = btn.dataset.ssid;
+                const bssid = btn.dataset.bssid;
+                
+                alert('To crack this handshake, use the command line:\n\nwifi_scanner crack-wpa --wordlist <path_to_wordlist> --ssid "' + ssid + '" --bssid ' + bssid);
+            }
+        });
+    });
+</script>
+
+<style>
+    .handshakes-container {
+        padding: 20px;
+    }
+    
+    .handshakes-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    .capture-form {
+        background-color: #f5f5f5;
+        padding: 20px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+    
+    .form-group input {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    
+    .disclaimer {
+        margin-top: 15px;
+        font-size: 0.9em;
+        color: #666;
+    }
+    
+    .capture-status {
+        display: flex;
+        align-items: center;
+        background-color: #f0f8ff;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+    
+    .capture-status.hidden {
+        display: none;
+    }
+    
+    .spinner {
+        border: 4px solid rgba(0, 0, 0, 0.1);
+        border-radius: 50%;
+        border-top: 4px solid #3498db;
+        width: 20px;
+        height: 20px;
+        animation: spin 1s linear infinite;
+        margin-right: 10px;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .handshakes-list {
+        margin-top: 30px;
+    }
+    
+    .verified {
+        color: green;
+        font-weight: bold;
+    }
+    
+    .not-verified {
+        color: red;
+    }
+    
+    .no-data {
+        text-align: center;
+        padding: 20px;
+        background-color: #f9f9f9;
+        border-radius: 5px;
+    }
+</style>
+{{/layout}}
